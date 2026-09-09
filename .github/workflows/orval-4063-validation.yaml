@@ -27,11 +27,14 @@ jobs:
         with:
           node-version: 24
           cache: false
+          run-install: false
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
       - name: Install with unchanged security scanner and lockfile
         run: vp install --frozen-lockfile
+      - name: Verify setup preserves committed validation inputs
+        run: git diff --exit-code -- bun.lock bunfig.toml packages/zod/src/index.ts packages/zod/src/zod.test.ts
       - name: Prepare repository
         run: vp run prepare
       - name: Build packages
