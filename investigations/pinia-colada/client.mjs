@@ -23,10 +23,13 @@ export default function piniaColadaClient(clients) {
     ],
     async client(verb, options, outputClient, output) {
       if (
-        verb.verb !== 'get' || verb.mutator ||
+        verb.verb !== 'get' ||
+        verb.mutator ||
         verb.props.some((prop) => prop.type !== 'param' || !prop.required)
       ) {
-        throw new Error('Colada prototype supports GET with required path parameters only');
+        throw new Error(
+          'Colada prototype supports GET with required path parameters only',
+        );
       }
       if (!options.override.fetch.forceSuccessResponse) {
         throw new Error('Colada prototype requires fetch.forceSuccessResponse');
@@ -34,11 +37,12 @@ export default function piniaColadaClient(clients) {
       const transport = await fetch.client(verb, options, outputClient, output);
       const name = verb.operationName;
       const title = name[0].toUpperCase() + name.slice(1);
-      const parameters = verb.props.map((prop, index) =>
-        `${prop.name}: MaybeRefOrGetter<Parameters<typeof ${name}>[${index}]>`
+      const parameters = verb.props.map(
+        (prop, index) =>
+          `${prop.name}: MaybeRefOrGetter<Parameters<typeof ${name}>[${index}]>`,
       );
-      const plainParameters = verb.props.map((prop, index) =>
-        `${prop.name}: Parameters<typeof ${name}>[${index}]`
+      const plainParameters = verb.props.map(
+        (prop, index) => `${prop.name}: Parameters<typeof ${name}>[${index}]`,
       );
       const resolved = verb.props.map((prop) => `toValue(${prop.name})`);
       const argumentsList = verb.props.map((prop) => prop.name);

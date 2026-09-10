@@ -1,12 +1,17 @@
 import { expect, test } from '@playwright/test';
 
-test('generated query reacts to IDs, reuses cache, refreshes, and recovers from errors', async ({ page }) => {
+test('generated query reacts to IDs, reuses cache, refreshes, and recovers from errors', async ({
+  page,
+}) => {
   const requests: number[] = [];
   await page.route('**/api/pets/*', async (route) => {
     const id = Number(new URL(route.request().url()).pathname.split('/').pop());
     requests.push(id);
     await new Promise((resolve) => setTimeout(resolve, 150));
-    await route.fulfill({ status: id === 500 ? 500 : 200, json: { id, name: `Pet ${id}` } });
+    await route.fulfill({
+      status: id === 500 ? 500 : 200,
+      json: { id, name: `Pet ${id}` },
+    });
   });
   await page.goto('/');
   await expect(page.getByTestId('loading')).toHaveText('loading');
@@ -25,14 +30,20 @@ test('generated query reacts to IDs, reuses cache, refreshes, and recovers from 
   await page.getByRole('button', { name: 'Pet 2', exact: true }).click();
   await expect(page.getByTestId('status')).toHaveText('success');
   await expect(page.getByTestId('data')).toContainText('Pet 2');
-  await page.screenshot({ path: test.info().outputPath('query-success.png'), fullPage: true });
+  await page.screenshot({
+    path: test.info().outputPath('query-success.png'),
+    fullPage: true,
+  });
 });
 
-test('a second forced refresh aborts the previous generated Fetch request', async ({ page }) => {
+test('a second forced refresh aborts the previous generated Fetch request', async ({
+  page,
+}) => {
   let requestCount = 0;
   const aborted: string[] = [];
   page.on('requestfailed', (request) => {
-    if (request.url().includes('/api/pets/')) aborted.push(request.failure()?.errorText ?? '');
+    if (request.url().includes('/api/pets/'))
+      aborted.push(request.failure()?.errorText ?? '');
   });
   await page.route('**/api/pets/*', async (route) => {
     const sequence = ++requestCount;

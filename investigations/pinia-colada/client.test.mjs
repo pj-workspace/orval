@@ -7,7 +7,8 @@ import client from './client.mjs';
 // These tests execute emitted wrappers with test doubles. They do not replace
 // the real Orval pipeline, TypeScript compilation, or Pinia Colada browser tests.
 const verb = {
-  verb: 'get', operationName: 'getPet',
+  verb: 'get',
+  operationName: 'getPet',
   props: [{ name: 'petId', type: 'param', required: true }],
 };
 const options = { override: { fetch: { forceSuccessResponse: true } } };
@@ -19,13 +20,20 @@ const clients = {
 
 test('emitted key and request resolve the current getter and preserve AbortSignal', async () => {
   const result = await client(clients).client(verb, options);
-  const emitted = stripTypeScriptTypes(result.implementation).replaceAll('export function', 'function');
+  const emitted = stripTypeScriptTypes(result.implementation).replaceAll(
+    'export function',
+    'function',
+  );
   const requests = [];
   const context = {
-    toValue: (input) => typeof input === 'function' ? input() : input?.value ?? input,
+    toValue: (input) =>
+      typeof input === 'function' ? input() : (input?.value ?? input),
     defineQueryOptions: (input) => input,
     useQuery: (input) => input,
-    getPet: (id, init) => { requests.push({ id, signal: init.signal }); return Promise.resolve({ id }); },
+    getPet: (id, init) => {
+      requests.push({ id, signal: init.signal });
+      return Promise.resolve({ id });
+    },
   };
   runInNewContext(emitted, context);
   let id = 1;
@@ -38,7 +46,11 @@ test('emitted key and request resolve the current getter and preserve AbortSigna
   await optionsGetter().query({ signal: abort.signal });
   await firstOptions.query({ signal: abort.signal });
   assert.equal(requests[0].id, 2);
-  assert.equal(requests[1].id, 1, "an older key keeps its matching request parameters");
+  assert.equal(
+    requests[1].id,
+    1,
+    'an older key keeps its matching request parameters',
+  );
   assert.equal(requests[0].signal, abort.signal);
   abort.abort();
   assert.equal(requests[0].signal.aborted, true);
@@ -50,9 +62,15 @@ test('prototype rejects unsupported operations and missing HTTP error handling',
   for (const modified of [
     { ...verb, verb: 'post' },
     { ...verb, mutator: {} },
-    { ...verb, props: [{ name: 'params', type: 'queryParam', required: false }] },
+    {
+      ...verb,
+      props: [{ name: 'params', type: 'queryParam', required: false }],
+    },
   ]) {
     await assert.rejects(adapter.client(modified, options), /supports GET/);
   }
-  await assert.rejects(adapter.client(verb, { override: { fetch: {} } }), /forceSuccessResponse/);
+  await assert.rejects(
+    adapter.client(verb, { override: { fetch: {} } }),
+    /forceSuccessResponse/,
+  );
 });

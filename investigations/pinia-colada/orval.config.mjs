@@ -10,7 +10,10 @@ export default {
       mode: 'split',
       httpClient: 'fetch',
       override: {
-        fetch: { includeHttpResponseReturnType: false, forceSuccessResponse: true },
+        fetch: {
+          includeHttpResponseReturnType: false,
+          forceSuccessResponse: true,
+        },
       },
     },
   },
