@@ -24,10 +24,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      - name: Resolve new workspace dependencies with security scanning
+      - name: Frozen install with security scanning
         run: |
-          bun install
           bun install --frozen-lockfile
+          git diff --exit-code -- bun.lock bunfig.toml
       - name: Build packages
         run: vp run -w build:release
       - name: Generate all Colada fixtures
