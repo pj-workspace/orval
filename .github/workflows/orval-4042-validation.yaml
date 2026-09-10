@@ -37,6 +37,14 @@ jobs:
         run: vp test run packages/core/src/utils/schema-import-path.test.ts packages/orval/src/utils/options.test.ts packages/orval/src/generate-spec.test.ts packages/orval/src/write-zod-specs.test.ts
       - name: Compile and execute generated single-file schemas
         run: bun .github/scripts/validate-orval-4042.ts
+      - name: Save generated examples for review
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: single-file-zod-examples
+          path: |
+            tests/generated/single-zod-validation/**/client.ts
+            tests/generated/single-zod-validation/**/model/*.ts
+            tests/generated/single-zod-validation/**/tsconfig.json
       - name: Repository check
         run: vp check
       - name: Lint packages
@@ -51,6 +59,10 @@ jobs:
         run: vp run -w test:samples
       - name: Build generated fixtures
         run: vp run -F orval-tests build
+      - name: Record regenerated sample differences
+        run: |
+          git diff --binary -- samples > "$RUNNER_TEMP/orval-4042-feature-samples.patch"
+          git diff --exit-code -- . ':!samples'
       - name: Prove the new integration tests fail on the upstream implementation
         shell: bash
         run: |
@@ -71,5 +83,16 @@ jobs:
           assert.equal(report.numFailedTests, 5);
           console.log('Upstream baseline: all five single-file integration tests fail as expected.');
           JS
+          git restore --source=HEAD -- samples
+          vp run -F './samples/**' generate-api
+          git diff --binary -- samples > "$RUNNER_TEMP/orval-4042-baseline-samples.patch"
+          cmp "$RUNNER_TEMP/orval-4042-feature-samples.patch" "$RUNNER_TEMP/orval-4042-baseline-samples.patch"
+          echo 'Regenerated tracked samples are byte-identical with and without the feature.'
+          git restore --source=HEAD -- samples
+      - name: Save comparison evidence
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: single-file-zod-baseline-comparison
+          path: ${{ runner.temp }}/orval-4042-*.patch
       - name: Verify no tracked input changes
         run: git diff --exit-code
