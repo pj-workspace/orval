@@ -1,6 +1,6 @@
 # Pinia Colada feasibility prototype for Orval #3341
 
-Status: generation, strict type assertions, build and browser interaction passed on [run 34447052702](https://github.com/pj-workspace/orval/actions/runs/34447052702). An additional real-browser cancellation check is included for the next run.
+Status: generation, strict type assertions, build and browser interaction passed on [run 34447052702](https://github.com/pj-workspace/orval/actions/runs/34447052702). Real-browser cancellation also passed on [run 34447269239](https://github.com/pj-workspace/orval/actions/runs/34447269239). The demo UI is English.
 Upstream baseline: `d69250dc72bc3db26f9612cb991796d1d7535cb5`.
 
 ## Intent
@@ -28,7 +28,7 @@ The registry currently reports Colada 1.4.4, requiring Vue ^3.5.41. This isolate
 - PASS: `node --test investigations/pinia-colada/client.test.mjs` — 2 tests. They execute the emitted wrapper with test doubles, proving current getter resolution, AbortSignal forwarding and unsupported-input rejection. They do **not** exercise actual Pinia Colada or the full Orval pipeline.
 - BLOCKED: local `vp install --frozen-lockfile` returned Socket scanner HTTP 403. Scanner and minimum-release-age settings were preserved.
 - PASS on run 34447052702: actual OpenAPI generation, strict generated-data/parameter type assertions, application build and Chromium acceptance for loading, reactive IDs, cache reuse, forced refresh, errors and recovery.
-- PENDING next run: added Chromium cancellation check and success screenshot.
+- PASS on run 34447269239: Chromium cancellation check and success screenshot.
 
 No upstream comments or PR have been sent. The user authorized this public Fork validation branch; pushes stay within that scope.
 
@@ -38,7 +38,7 @@ The workflow `.github/workflows/orval-3341-feasibility.yaml` runs only on `valid
 
 Upstream has a pre-existing lock/declaration mismatch for js-yaml. The first disposable run resolved dependencies with the repository scanner and release-age policy, then checked a frozen reinstall. Both resulting locks were retrieved and committed on this validation-only branch. Subsequent runs start with frozen installs and verify tracked files remain unchanged. The isolated sample retains the same security policy. Validation lock changes are not intended for an upstream feature PR.
 
-The browser test exercises the generated composable using intercepted synthetic HTTP responses: initial loading, reactive ID changes, cache reuse, forced refresh, HTTP error state and recovery. A second browser test now verifies that forcing another refresh aborts the previous generated Fetch request; its result is pending the next run. The local contract test alone proves signal forwarding.
+The browser test exercises the generated composable using intercepted synthetic HTTP responses: initial loading, reactive ID changes, cache reuse, forced refresh, HTTP error state and recovery. A second browser test verifies that forcing another refresh aborts the previous generated Fetch request; it passed on run 34447269239. The local contract test alone proves signal forwarding.
 
 To run after dependencies and root packages are built:
 
