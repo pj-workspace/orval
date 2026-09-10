@@ -52,12 +52,21 @@ jobs:
           bun run test:browser
       - name: Test all packages
         run: vp run -w test
+      - name: Existing generated snapshots and samples
+        run: |
+          vp run -w test:snapshots
+          vp run -w test:samples
+          vp run -F orval-tests build
+      - name: Record generated fixture differences
+        if: always()
+        run: git diff --binary > generated-fixture-differences.patch
       - uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
           name: pinia-colada-implementation-evidence
           path: |
             bun.lock
+            generated-fixture-differences.patch
             samples/pinia-colada/src/gen
             samples/pinia-colada/dist
             samples/pinia-colada/test-results
