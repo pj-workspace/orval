@@ -1,0 +1,71 @@
+name: Validate Pinia Colada feasibility
+on:
+  push:
+    branches: [validation/orval-3341]
+permissions:
+  contents: read
+concurrency:
+  group: orval-3341-feasibility
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.repository == 'pj-workspace/orval'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          run-install: false
+          cache: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Resolve baseline dependencies with security scanning
+        # The upstream lock has an existing js-yaml workspace mismatch.
+        # Resolve only in this disposable validation job and retain the lock.
+        run: vp install
+      - name: Verify baseline lock can install frozen
+        run: |
+          sha256sum bun.lock > "$RUNNER_TEMP/root-lock.sha256"
+          vp install --frozen-lockfile
+          sha256sum --check "$RUNNER_TEMP/root-lock.sha256"
+          git diff --exit-code -- bunfig.toml package.json 'packages/**'
+      - name: Build upstream packages
+        run: vp run -w build:release
+      - name: Test emitted wrapper contract
+        run: node --test investigations/pinia-colada/client.test.mjs
+      - name: Install isolated sample with the same security policy
+        working-directory: investigations/pinia-colada
+        run: |
+          bun install
+          sha256sum bun.lock > "$RUNNER_TEMP/sample-lock.sha256"
+          bun install --frozen-lockfile
+          sha256sum --check "$RUNNER_TEMP/sample-lock.sha256"
+      - name: Generate from OpenAPI, compile, and build the Vue sample
+        working-directory: investigations/pinia-colada
+        run: |
+          bun run generate
+          bun run typecheck
+          bun run build
+      - name: Install Chromium
+        working-directory: investigations/pinia-colada
+        run: bun x --no-install playwright install --with-deps chromium
+      - name: Browser acceptance
+        working-directory: investigations/pinia-colada
+        run: bun run test:browser
+      - name: Verify source and security settings are unchanged
+        run: git diff --exit-code -- . ':!bun.lock'
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: pinia-colada-feasibility-evidence
+          path: |
+            bun.lock
+            investigations/pinia-colada/bun.lock
+            investigations/pinia-colada/src/generated
+            investigations/pinia-colada/dist
+            investigations/pinia-colada/test-results
