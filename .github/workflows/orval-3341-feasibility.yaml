@@ -1,4 +1,4 @@
-name: Validate Pinia Colada feasibility
+name: Validate Pinia Colada implementation
 on:
   push:
     branches: [validation/orval-3341]
@@ -24,41 +24,40 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      - name: Frozen install with repository security scanning
+      - name: Resolve new workspace dependencies with security scanning
         run: |
-          vp install --frozen-lockfile
-          git diff --exit-code -- bun.lock bunfig.toml package.json 'packages/**'
-      - name: Build upstream packages
-        run: vp run -w build:release
-      - name: Test emitted wrapper contract
-        run: node --test investigations/pinia-colada/client.test.mjs
-      - name: Install isolated sample with the same security policy
-        working-directory: investigations/pinia-colada
-        run: |
-          sha256sum bun.lock > "$RUNNER_TEMP/sample-lock.sha256"
+          bun install
           bun install --frozen-lockfile
-          sha256sum --check "$RUNNER_TEMP/sample-lock.sha256"
-      - name: Generate from OpenAPI, compile, and build the Vue sample
-        working-directory: investigations/pinia-colada
+      - name: Build packages
+        run: vp run -w build:release
+      - name: Generate all Colada fixtures
+        run: vp run -F pinia-colada-sample generate-api
+      - name: Typecheck packages and generated clients
         run: |
-          bun run generate
-          bun run typecheck
-          bun run build
-      - name: Install Chromium
-        working-directory: investigations/pinia-colada
-        run: bun x --no-install playwright install --with-deps chromium
+          vp run -w typecheck
+          vp run -F pinia-colada-sample test
+      - name: Generator integration tests
+        run: vp test run packages/orval/src/pinia-colada.test.ts
+      - name: Format and lint
+        run: |
+          vp fmt --check
+          vp run -w lint
+          vp lint samples/pinia-colada
+      - name: Build English sample
+        run: vp run -F pinia-colada-sample build
       - name: Browser acceptance
-        working-directory: investigations/pinia-colada
-        run: bun run test:browser
-      - name: Verify source and security settings are unchanged
-        run: git diff --exit-code
+        working-directory: samples/pinia-colada
+        run: |
+          bun x --no-install playwright install --with-deps chromium
+          bun run test:browser
+      - name: Test all packages
+        run: vp run -w test
       - uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
-          name: pinia-colada-feasibility-evidence
+          name: pinia-colada-implementation-evidence
           path: |
             bun.lock
-            investigations/pinia-colada/bun.lock
-            investigations/pinia-colada/src/generated
-            investigations/pinia-colada/dist
-            investigations/pinia-colada/test-results
+            samples/pinia-colada/src/gen
+            samples/pinia-colada/dist
+            samples/pinia-colada/test-results
