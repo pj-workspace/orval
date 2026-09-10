@@ -24,16 +24,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      - name: Resolve baseline dependencies with security scanning
-        # The upstream lock has an existing js-yaml workspace mismatch.
-        # Resolve only in this disposable validation job and retain the lock.
-        run: vp install
-      - name: Verify baseline lock can install frozen
+      - name: Frozen install with repository security scanning
         run: |
-          sha256sum bun.lock > "$RUNNER_TEMP/root-lock.sha256"
           vp install --frozen-lockfile
-          sha256sum --check "$RUNNER_TEMP/root-lock.sha256"
-          git diff --exit-code -- bunfig.toml package.json 'packages/**'
+          git diff --exit-code -- bun.lock bunfig.toml package.json 'packages/**'
       - name: Build upstream packages
         run: vp run -w build:release
       - name: Test emitted wrapper contract
@@ -41,7 +35,6 @@ jobs:
       - name: Install isolated sample with the same security policy
         working-directory: investigations/pinia-colada
         run: |
-          bun install
           sha256sum bun.lock > "$RUNNER_TEMP/sample-lock.sha256"
           bun install --frozen-lockfile
           sha256sum --check "$RUNNER_TEMP/sample-lock.sha256"
@@ -58,7 +51,7 @@ jobs:
         working-directory: investigations/pinia-colada
         run: bun run test:browser
       - name: Verify source and security settings are unchanged
-        run: git diff --exit-code -- . ':!bun.lock'
+        run: git diff --exit-code
       - uses: actions/upload-artifact@v7.0.1
         if: always()
         with:

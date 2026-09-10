@@ -37,23 +37,26 @@ export default function piniaColadaClient(clients) {
       const parameters = verb.props.map((prop, index) =>
         `${prop.name}: MaybeRefOrGetter<Parameters<typeof ${name}>[${index}]>`
       );
+      const plainParameters = verb.props.map((prop, index) =>
+        `${prop.name}: Parameters<typeof ${name}>[${index}]`
+      );
       const resolved = verb.props.map((prop) => `toValue(${prop.name})`);
       const argumentsList = verb.props.map((prop) => prop.name);
-      const key = [JSON.stringify(name), ...resolved].join(', ');
+      const key = [JSON.stringify(name), ...argumentsList].join(', ');
       return {
         ...transport,
         implementation: `${transport.implementation}
 
-export function get${title}ColadaOptions(${parameters.join(', ')}) {
+export function get${title}ColadaOptions(${plainParameters.join(', ')}) {
   return defineQueryOptions({
-    key: () => [${key}],
-    query: ({ signal }) => ${name}(${[...resolved, '{ signal }'].join(', ')}),
+    key: [${key}],
+    query: ({ signal }) => ${name}(${[...argumentsList, '{ signal }'].join(', ')}),
     staleTime: 60_000,
   });
 }
 
 export function use${title}(${parameters.join(', ')}) {
-  return useQuery(get${title}ColadaOptions(${argumentsList.join(', ')}));
+  return useQuery(() => get${title}ColadaOptions(${resolved.join(', ')}));
 }
 `,
       };
