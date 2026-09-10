@@ -1,0 +1,75 @@
+name: Validate single-file Zod schemas
+on:
+  push:
+    branches: [validation/orval-4042]
+permissions:
+  contents: read
+concurrency:
+  group: validate-orval-4042
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.repository == 'pj-workspace/orval'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          cache: false
+          run-install: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Install with repository security scanner
+        run: vp install --frozen-lockfile
+      - name: Verify lockfile
+        run: git diff --exit-code -- bun.lock bunfig.toml
+      - name: Build packages
+        run: vp run -w build:release
+      - name: Focused regression tests
+        run: vp test run packages/core/src/utils/schema-import-path.test.ts packages/orval/src/utils/options.test.ts packages/orval/src/generate-spec.test.ts packages/orval/src/write-zod-specs.test.ts
+      - name: Compile and execute generated single-file schemas
+        run: bun .github/scripts/validate-orval-4042.ts
+      - name: Repository check
+        run: vp check
+      - name: Lint packages
+        run: vp run -w lint
+      - name: Typecheck packages
+        run: vp run -w typecheck
+      - name: Test packages
+        run: vp run -w test
+      - name: Verify existing snapshots
+        run: vp run -w test:snapshots
+      - name: Test samples
+        run: vp run -w test:samples
+      - name: Build generated fixtures
+        run: vp run -F orval-tests build
+      - name: Prove the new integration tests fail on the upstream implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(packages/core/src/types.ts packages/core/src/utils/schema-import-path.ts packages/orval/src/utils/options.ts packages/orval/src/write-specs.ts packages/orval/src/write-zod-specs.ts)
+          trap 'git restore --source=HEAD -- "${files[@]}"' EXIT
+          git restore --source=d69250d -- "${files[@]}"
+          vp run -w build:release
+          set +e
+          vp test run packages/orval/src/generate-spec.test.ts -t 'single-file Zod schemas' --reporter=json --outputFile="$RUNNER_TEMP/orval-4042-baseline.json"
+          result=$?
+          set -e
+          test "$result" -eq 1
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const report = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/orval-4042-baseline.json`, 'utf8'));
+          assert.equal(report.numFailedTests, 5);
+          console.log('Upstream baseline: all five single-file integration tests fail as expected.');
+          JS
+      - name: Verify no tracked input changes
+        run: git diff --exit-code
