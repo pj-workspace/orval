@@ -1,0 +1,41 @@
+name: Validate Colada test cleanup
+on:
+  push:
+    branches: [validation/orval-3341-cleanup]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.repository == 'pj-workspace/orval'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 22.x
+          run-install: false
+          cache: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Verify cleanup boundaries
+        run: node .github/scripts/colada-cleanup-boundaries.mjs
+      - name: Install with repository security scanning
+        run: bun install
+      - name: Build packages
+        run: vp run -w build:release
+      - name: Generate and clean Angular, Fetch and Axios clients
+        run: vp test run packages/orval/src/pinia-colada.test.ts
+      - name: Check types and lint
+        run: |
+          vp run -w typecheck
+          vp lint --type-aware --type-check packages/orval/src/pinia-colada.test.ts
+      - name: Verify no test workspaces remain
+        run: node -e "const fs=require('node:fs'); const dirs=fs.readdirSync('packages/orval/src').filter(n=>/^\.(orval-angular|orval-colada|cleanup-audit)-/.test(n)); if(dirs.length) throw Error(dirs.join(',')); console.log('No temporary workspaces remain');"
