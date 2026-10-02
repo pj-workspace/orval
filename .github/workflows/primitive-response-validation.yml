@@ -1,0 +1,84 @@
+name: Validate primitive response schemas
+on:
+  push:
+    branches: [validation/orval-4138]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.repository == 'pj-workspace/orval'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version: 22.x
+          run-install: false
+          cache: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Install with unchanged security scanning
+        run: vp install --frozen-lockfile
+      - name: Format changed sources
+        run: vp fmt --write packages/core/src/generators/runtime-validation.ts packages/core/src/generators/runtime-validation.test.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/core/src/getters/response.test.ts packages/fetch/src/index.ts packages/orval/src/primitive-response-validation.test.ts
+      - name: Build packages
+        run: vp run -w build:release
+      - name: Test core and generated primitive responses
+        run: vp test run packages/core/src/generators/runtime-validation.test.ts packages/core/src/getters/response.test.ts packages/orval/src/primitive-response-validation.test.ts --update
+      - name: Check package types and lint
+        run: |
+          vp run -w typecheck
+          vp run -w lint
+      - name: Test packages
+        run: vp run -w test
+      - name: Regenerate and check snapshots
+        run: vp run -w test:snapshots:update
+      - name: Check generated clients and samples
+        run: |
+          vp run -F orval-tests build
+          vp run -w test:samples
+          vp run -w lint:samples
+          vp run -w lint:tests
+      - name: Save generated output and formatting changes
+        if: always()
+        run: |
+          mkdir -p .validation
+          git add -N -- packages/orval/src/__snapshots__ tests/__snapshots__
+          git diff --binary > .validation/generated.patch
+          git status --short > .validation/status.txt
+      - name: Reproduce failure on unmodified master
+        if: success() && runner.os == 'Linux'
+        run: |
+          source_files=(packages/core/src/generators/runtime-validation.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/fetch/src/index.ts)
+          git restore --source=f29945667017211c2857083cce17e923abee25c7 -- "${source_files[@]}"
+          vp run -w build:release
+          set +e
+          vp test run packages/orval/src/primitive-response-validation.test.ts -t 'rejects a malformed boolean success response' > .validation/baseline.log 2>&1
+          result=$?
+          set -e
+          cat .validation/baseline.log
+          if [ "$result" -eq 0 ]; then
+            echo 'Expected unmodified master to return the invalid boolean without validation'
+            exit 1
+          fi
+          if ! grep -q 'promise resolved' .validation/baseline.log; then
+            echo 'Baseline failed for an unexpected reason'
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: primitive-validation-${{ matrix.os }}
+          path: .validation
+          include-hidden-files: true
