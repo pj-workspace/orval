@@ -602,8 +602,13 @@ ${deepObjectParameters.length > 0 ? '  const deepObjectEntries: string[] = [];\n
   const useValidatedOutputType =
     isValidateResponse && isZodSchemasOutput && !mutator;
   const validatesPrimitiveResponse = response.types.success.some(
-    ({ originalSchema }) =>
-      originalSchema !== undefined && isPrimitiveResponseSchema(originalSchema),
+    ({ value, schemas }) =>
+      schemas.some(
+        ({ name, schema }) =>
+          name === value &&
+          schema !== undefined &&
+          isPrimitiveResponseSchema(schema),
+      ),
   );
 
   const allResponses = [...response.types.success, ...response.types.errors];
