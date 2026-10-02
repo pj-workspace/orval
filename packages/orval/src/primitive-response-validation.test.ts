@@ -281,6 +281,37 @@ describe('primitive response runtime validation (#4138)', () => {
     });
   });
 
+  it('retains legacy nullability and the existing numeric Zod int64 mapping', async () => {
+    const spec = scalarSpec({
+      readValue: { type: 'integer', format: 'int64', nullable: true },
+    });
+    spec.openapi = '3.0.3';
+    await generate(
+      {
+        client: 'fetch',
+        override: { useBigInt: true, fetch: { runtimeValidation: true } },
+      },
+      spec,
+    );
+    expect(diagnostics()).toEqual([]);
+    const client = await dynamicImport<{ readValue: () => Promise<unknown> }>(
+      './client.ts',
+      workspace,
+      false,
+    );
+    for (const value of [42, null]) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(value), {
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      );
+      await expect(client.readValue()).resolves.toMatchObject({ data: value });
+    }
+  });
+
   it('supports consolidated schemas and the both strategy', async () => {
     const client = await generate({
       client: 'fetch',
