@@ -185,6 +185,17 @@ describe('primitive response runtime validation (#4138)', () => {
     await expect(client.readInteger()).resolves.toMatchObject({ status: 400, data: 'error body' });
   });
 
+  it('rejects a malformed boolean success response', async () => {
+    await generate({ client: 'fetch', override: { fetch: { runtimeValidation: true } } });
+    const client = await dynamicImport<{ readValue: () => Promise<unknown> }>(
+      './client.ts', workspace, false,
+    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('1', { headers: { 'content-type': 'application/json' } }),
+    ));
+    await expect(client.readValue()).rejects.toMatchObject({ name: 'ZodError' });
+  });
+
   it('supports inline schemas and the both strategy', async () => {
     const client = await generate({
       client: 'fetch',
