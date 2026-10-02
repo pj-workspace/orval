@@ -201,12 +201,9 @@ export function resolveSchemaImportDependencies(
     // falls back to the flat layout.
     const dependency = schemaOutputPlan
       ? isPackageImport
-        ? (schemaOutputPlan.packageImportPath(schemaImport.name) ??
+        ? (schemaOutputPlan.packageImportPath(baseName) ??
           flatDependency)
-        : schemaOutputPlan.clientImportPath(
-            schemaImport.name,
-            relativeSchemasPath,
-          )
+        : schemaOutputPlan.clientImportPath(baseName, relativeSchemasPath)
       : flatDependency;
 
     const existing = importsByDependency.get(dependency);
