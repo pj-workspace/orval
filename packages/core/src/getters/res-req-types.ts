@@ -145,7 +145,7 @@ function getResReqContentTypes({
           imports: existingSchema?.imports ?? resolvedObject.imports,
           dependencies:
             existingSchema?.dependencies ?? resolvedObject.dependencies,
-          kind: 'schema' as const,
+          kind: existingSchema?.kind ?? ('schema' as const),
           schema: resolvedObject.originalSchema,
         },
       ],

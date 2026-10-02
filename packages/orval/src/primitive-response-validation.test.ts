@@ -327,6 +327,30 @@ describe('primitive response runtime validation (#4138)', () => {
     expect(diagnostics()).toEqual([]);
   });
 
+  it('preserves inline enum routing and direct schema imports', async () => {
+    const client = await generate(
+      {
+        client: 'fetch',
+        indexFiles: false,
+        schemas: {
+          path: './model',
+          type: 'zod',
+          routes: { default: 'models', enum: 'enums' },
+        },
+        override: { fetch: { runtimeValidation: true } },
+      },
+      scalarSpec({ readValue: { type: 'string', enum: ['ready', 'done'] } }),
+    );
+    const schema = await readFile(
+      path.join(workspace, 'model/enums/readValue200.zod.ts'),
+      'utf8',
+    );
+    expect(schema).toContain("zod.enum(['ready', 'done'])");
+    expect(client).toContain("from './model/enums/readValue200.zod'");
+    expect(client).toContain('ReadValue200.parse(parsedBody)');
+    expect(diagnostics()).toEqual([]);
+  });
+
   it.each([3, 4] as const)(
     'uses existing Zod %s integer and nullable rules',
     async (version) => {
