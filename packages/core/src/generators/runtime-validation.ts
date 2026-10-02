@@ -236,7 +236,10 @@ export const isPrimitiveResponseSchema = (
 
   if (schema.type) {
     const types = Array.isArray(schema.type) ? schema.type : [schema.type];
-    return types.length > 0 && types.every((type) => RESPONSE_SCALAR_SCHEMA_TYPES.has(type));
+    return (
+      types.length > 0 &&
+      types.every((type) => RESPONSE_SCALAR_SCHEMA_TYPES.has(type))
+    );
   }
 
   const combined = schema.anyOf ?? schema.oneOf ?? schema.allOf;

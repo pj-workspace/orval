@@ -59,21 +59,26 @@ describe('getResponse', () => {
       { type: ['number', 'null'] },
       { type: 'boolean', enum: [true] },
       { type: ['string', 'null'], enum: ['ready', 'done', null] },
-    ])('retains the original schema in a named success response: %j', (schema) => {
-      const result = getResponse({
-        responses: { 200: jsonResponse(schema), 400: jsonResponse(schema) },
-        operationName: 'readValue',
-        context,
-        generatePrimitiveSchemas: true,
-      });
+    ])(
+      'retains the original schema in a named success response: %j',
+      (schema) => {
+        const result = getResponse({
+          responses: { 200: jsonResponse(schema), 400: jsonResponse(schema) },
+          operationName: 'readValue',
+          context,
+          generatePrimitiveSchemas: true,
+        });
 
-      expect(result.definition.success).toBe('ReadValue200');
-      expect(result.imports).toContainEqual({ name: 'ReadValue200' });
-      expect(result.schemas.find(({ name }) => name === 'ReadValue200')?.schema)
-        .toEqual(schema);
-      expect(result.schemas.find(({ name }) => name === 'ReadValue400')?.schema)
-        .toBeUndefined();
-    });
+        expect(result.definition.success).toBe('ReadValue200');
+        expect(result.imports).toContainEqual({ name: 'ReadValue200' });
+        expect(
+          result.schemas.find(({ name }) => name === 'ReadValue200')?.schema,
+        ).toEqual(schema);
+        expect(
+          result.schemas.find(({ name }) => name === 'ReadValue400')?.schema,
+        ).toBeUndefined();
+      },
+    );
 
     it('leaves primitive definitions unchanged when not requested', () => {
       const result = getResponse({
@@ -93,15 +98,18 @@ describe('getResponse', () => {
         description: 'Plain text',
         content: { 'text/plain': { schema: { type: 'string' as const } } },
       },
-    ])('does not synthesize schemas for empty, unknown, array or text responses', (response) => {
-      const result = getResponse({
-        responses: { 200: response },
-        operationName: 'readValue',
-        context,
-        generatePrimitiveSchemas: true,
-      });
-      expect(result.schemas).toEqual([]);
-    });
+    ])(
+      'does not synthesize schemas for empty, unknown, array or text responses',
+      (response) => {
+        const result = getResponse({
+          responses: { 200: response },
+          operationName: 'readValue',
+          context,
+          generatePrimitiveSchemas: true,
+        });
+        expect(result.schemas).toEqual([]);
+      },
+    );
   });
 
   describe('multiple status codes with same schema', () => {
