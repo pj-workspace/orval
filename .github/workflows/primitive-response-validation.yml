@@ -60,6 +60,7 @@ jobs:
       - name: Reproduce failure on unmodified master
         if: success() && runner.os == 'Linux'
         run: |
+          git fetch --no-tags --depth=1 https://github.com/orval-labs/orval.git f29945667017211c2857083cce17e923abee25c7
           source_files=(packages/core/src/generators/runtime-validation.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/fetch/src/index.ts)
           git restore --source=f29945667017211c2857083cce17e923abee25c7 -- "${source_files[@]}"
           vp run -w build:release
