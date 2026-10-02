@@ -20,6 +20,8 @@ import {
 import { generateSpec } from './generate-spec';
 import { normalizeOptions } from './utils/options';
 
+type TestOutputOptions = Omit<OutputOptions, 'target'>;
+
 const scalarSpec = (
   schemas: Record<string, OpenApiSchemaObject>,
 ): OpenApiDocument => ({
@@ -52,14 +54,14 @@ const scalarSpec = (
   ),
 });
 
-const clients: [string, OutputOptions][] = [
+const clients: [string, TestOutputOptions][] = [
   [
     'fetch',
     { client: 'fetch', override: { fetch: { runtimeValidation: true } } },
   ],
   ...(
     ['react-query', 'vue-query', 'svelte-query', 'solid-query', 'swr'] as const
-  ).map((client): [string, OutputOptions] => [
+  ).map((client): [string, TestOutputOptions] => [
     client,
     {
       client,
@@ -110,7 +112,7 @@ describe('primitive response runtime validation (#4138)', () => {
   });
 
   async function generate(
-    output: OutputOptions,
+    output: TestOutputOptions,
     spec = scalarSpec({ readValue: { type: 'boolean' } }),
   ) {
     const options = await normalizeOptions(
@@ -219,26 +221,22 @@ describe('primitive response runtime validation (#4138)', () => {
       for (const value of valid) {
         vi.stubGlobal(
           'fetch',
-          vi
-            .fn()
-            .mockResolvedValue(
-              new Response(JSON.stringify(value), {
-                headers: { 'content-type': 'application/json' },
-              }),
-            ),
+          vi.fn().mockResolvedValue(
+            new Response(JSON.stringify(value), {
+              headers: { 'content-type': 'application/json' },
+            }),
+          ),
         );
         await expect(client[name]()).resolves.toMatchObject({ data: value });
       }
       for (const value of invalid) {
         vi.stubGlobal(
           'fetch',
-          vi
-            .fn()
-            .mockResolvedValue(
-              new Response(JSON.stringify(value), {
-                headers: { 'content-type': 'application/json' },
-              }),
-            ),
+          vi.fn().mockResolvedValue(
+            new Response(JSON.stringify(value), {
+              headers: { 'content-type': 'application/json' },
+            }),
+          ),
         );
         await expect(client[name]()).rejects.toMatchObject({
           name: 'ZodError',
@@ -247,14 +245,12 @@ describe('primitive response runtime validation (#4138)', () => {
     }
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response('"error body"', {
-            status: 400,
-            headers: { 'content-type': 'application/json' },
-          }),
-        ),
+      vi.fn().mockResolvedValue(
+        new Response('"error body"', {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
     );
     await expect(client.readInteger()).resolves.toMatchObject({
       status: 400,
@@ -274,13 +270,11 @@ describe('primitive response runtime validation (#4138)', () => {
     );
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response('1', {
-            headers: { 'content-type': 'application/json' },
-          }),
-        ),
+      vi.fn().mockResolvedValue(
+        new Response('1', {
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
     );
     await expect(client.readValue()).rejects.toMatchObject({
       name: 'ZodError',
@@ -293,7 +287,10 @@ describe('primitive response runtime validation (#4138)', () => {
       schemas: { path: './model', type: 'zod', mode: 'single' },
       override: { fetch: { runtimeValidation: { strategy: 'both' } } },
     });
-    const schema = await readFile(path.join(workspace, 'model/index.zod.ts'), 'utf8');
+    const schema = await readFile(
+      path.join(workspace, 'model/index.zod.ts'),
+      'utf8',
+    );
     expect(schema).toContain('export const ReadValue200 = zod.boolean()');
     expect(client).toContain('ReadValue200.safeParse(parsedBody)');
     expect(diagnostics()).toEqual([]);
@@ -338,7 +335,7 @@ describe('primitive response runtime validation (#4138)', () => {
     expect(diagnostics()).toEqual([]);
   });
 
-  it.each<OutputOptions>([
+  it.each([
     { client: 'fetch', override: { fetch: { runtimeValidation: false } } },
     {
       client: 'react-query',
@@ -350,7 +347,7 @@ describe('primitive response runtime validation (#4138)', () => {
       schemas: { path: './model', type: 'typescript' },
       override: { fetch: { runtimeValidation: true } },
     },
-  ])(
+  ] satisfies TestOutputOptions[])(
     'does not enable primitive validation for a disabled or unsupported configuration: %j',
     async (output) => {
       const client = await generate(output);
