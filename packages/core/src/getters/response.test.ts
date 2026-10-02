@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { createTestContextSpec } from '../test-utils';
 import type {
   ContextSpec,
+  OpenApiResponseObject,
   OpenApiResponsesObject,
   OpenApiSchemaObject,
 } from '../types';
@@ -90,7 +91,7 @@ describe('getResponse', () => {
       expect(result.schemas).toEqual([]);
     });
 
-    it.each([
+    it.each<OpenApiResponseObject>([
       { description: 'No content' },
       jsonResponse({}),
       jsonResponse({ type: 'array', items: { type: 'string' } }),
