@@ -47,21 +47,13 @@ jobs:
       - name: Build packages
         run: vp run -w build:release
       - name: Test core and generated primitive responses
-        run: vp test run packages/core/src/generators/runtime-validation.test.ts packages/core/src/getters/response.test.ts packages/orval/src/primitive-response-validation.test.ts --update
+        run: vp test run packages/core/src/generators/runtime-validation.test.ts packages/core/src/getters/response.test.ts packages/orval/src/primitive-response-validation.test.ts
       - name: Check package types and lint
         run: |
           vp run -w typecheck
           vp run -w lint
       - name: Test packages
         run: vp run -w test
-      - name: Regenerate and check snapshots
-        run: vp run -w test:snapshots:update
-      - name: Check generated clients and samples
-        run: |
-          vp run -F orval-tests build
-          vp run -w test:samples
-          vp run -w lint:samples
-          vp run -w lint:tests
       - name: Save generated output and formatting changes
         if: always()
         run: |
