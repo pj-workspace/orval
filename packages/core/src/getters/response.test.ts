@@ -98,8 +98,20 @@ describe('getResponse', () => {
         description: 'Plain text',
         content: { 'text/plain': { schema: { type: 'string' as const } } },
       },
+      {
+        description: 'NDJSON stream',
+        content: {
+          'application/nd-json': { schema: { type: 'string' as const } },
+        },
+      },
+      {
+        description: 'NDJSON stream',
+        content: {
+          'application/x-ndjson': { schema: { type: 'string' as const } },
+        },
+      },
     ])(
-      'does not synthesize schemas for empty, unknown, array or text responses',
+      'does not synthesize schemas for empty, unknown, array, text or streaming responses',
       (response) => {
         const result = getResponse({
           responses: { 200: response },

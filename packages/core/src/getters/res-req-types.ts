@@ -348,7 +348,8 @@ export function getResReqTypes(
                 generatePrimitiveSchemas &&
                 key.startsWith('2') &&
                 contentType.includes('json') &&
-                !contentType.includes('ndjson'),
+                !contentType.includes('ndjson') &&
+                !contentType.includes('nd-json'),
             });
 
             if (!resolvedValue) {
