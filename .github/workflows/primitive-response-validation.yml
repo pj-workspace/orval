@@ -29,7 +29,19 @@ jobs:
         with:
           bun-version: 1.4.2
       - name: Install with unchanged security scanning
-        run: vp install --frozen-lockfile
+        run: |
+          mkdir -p .validation
+          for attempt in 1 2 3; do
+            if vp install --frozen-lockfile > .validation/install.log 2>&1; then
+              cat .validation/install.log
+              break
+            fi
+            cat .validation/install.log
+            if [ "$attempt" -eq 3 ] || ! grep -qE 'Received 50[234] from server' .validation/install.log; then
+              exit 1
+            fi
+            sleep 10
+          done
       - name: Format changed sources
         run: vp fmt --write packages/core/src/generators/runtime-validation.ts packages/core/src/generators/runtime-validation.test.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/core/src/getters/response.test.ts packages/fetch/src/index.ts packages/orval/src/primitive-response-validation.test.ts
       - name: Build packages
@@ -80,6 +92,6 @@ jobs:
       - uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
-          name: primitive-validation-${{ matrix.os }}
+          name: primitive-validation-${{ matrix.os }}-${{ github.run_attempt }}
           path: .validation
           include-hidden-files: true
