@@ -43,7 +43,7 @@ jobs:
             sleep 10
           done
       - name: Format changed sources
-        run: vp fmt --write packages/core/src/generators/runtime-validation.ts packages/core/src/generators/runtime-validation.test.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/core/src/getters/response.test.ts packages/fetch/src/index.ts packages/orval/src/primitive-response-validation.test.ts
+        run: vp fmt --write packages/core/src/generators/runtime-validation.ts packages/core/src/generators/runtime-validation.test.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/core/src/getters/response.test.ts packages/core/src/utils/schema-import-path.ts packages/fetch/src/index.ts packages/orval/src/primitive-response-validation.test.ts
       - name: Build packages
         run: vp run -w build:release
       - name: Test core and generated primitive responses
@@ -73,7 +73,7 @@ jobs:
         if: success() && runner.os == 'Linux'
         run: |
           git fetch --no-tags --depth=1 https://github.com/orval-labs/orval.git f29945667017211c2857083cce17e923abee25c7
-          source_files=(packages/core/src/generators/runtime-validation.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/fetch/src/index.ts)
+          source_files=(packages/core/src/generators/runtime-validation.ts packages/core/src/generators/verbs-options.ts packages/core/src/getters/res-req-types.ts packages/core/src/getters/response.ts packages/core/src/utils/schema-import-path.ts packages/fetch/src/index.ts)
           git restore --source=f29945667017211c2857083cce17e923abee25c7 -- "${source_files[@]}"
           vp run -w build:release
           set +e
